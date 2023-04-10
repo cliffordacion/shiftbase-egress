@@ -1,38 +1,46 @@
 @startuml shiftbase/eggress
-Psr\Http\Message\RequestInterface <|-- App\Models\Request
-Psr\Http\Message\ResponseInterface <|-- App\Models\Response
-Psr\Http\Message\RequestInterface <|-- App\Models\ExternalRequest
-Psr\Http\Message\ResponseInterface <|-- App\Models\ExternalResponse
-Psr\Http\Client\ClientInterface <|-- App\Models\Client
-
-Psr\Http\Message\RequestFactoryInterface <|-- App\Factory\ExternalRequestFactory
-Psr\Http\Message\ResponseFactoryInterface <|-- App\Factory\ResponseFactory
-
-
-App\Contract\Activity <|-- App\Models\Activities\Sms
-App\Contract\Result <|-- App\Models\Results\Sms
-App\Models\Results\Sms -- App\Models\Activities\Sms : refere
-
-
-App\Contract\Activity <|-- App\Models\Activities\SmsList
-App\Contract\Result <|-- App\Contract\Paginated
-App\Contract\Paginated <|-- App\Models\Results\SmsList
-App\Models\Results\SmsList -- App\Models\Activities\SmsList : refere
-App\Models\Results\SmsList o-- App\Models\Results\Sms
-
-App\Controller --* App\Factory\RequestFactory
-App\Controller --* App\Factory\ExternalRequestFactory
-App\Controller --* App\Factory\ResponseFactory
-App\Controller --* App\Factory\ActivityFactory
 App\Controller --* App\Middlewares\MiddlewareProvider
-App\Controller --* App\Models\Client
 
-App\Factory\RequestFactory --> App\Models\Request
-App\Factory\ExternalRequestFactory --> App\Models\ExternalRequest
-App\Factory\ResponseFactory --> App\Models\Response
-App\Factory\ResponseFactory --> App\Models\ExternalResponse
-App\Factory\ActivityFactory --> App\Contract\Activity
+node "Requests" {
+    App\Models\Request --|> Psr\Http\Message\RequestInterface
+    App\Models\ExternalRequest --|> Psr\Http\Message\RequestInterface
+    Psr\Http\Message\RequestFactoryInterface <|-- App\Factory\ExternalRequestFactory
+    App\Controller --* App\Factory\RequestFactory
+    App\Controller --* App\Factory\ExternalRequestFactory
+    App\Factory\RequestFactory --> App\Models\Request
+    App\Factory\ExternalRequestFactory --> App\Models\ExternalRequest
+}
 
+node "Client" {
+    App\Models\Client --|> Psr\Http\Client\ClientInterface
+    App\Controller --* App\Models\Client
+
+}
+
+node "Response" {
+    App\Controller --* App\Factory\ResponseFactory
+    App\Models\Response --|> Psr\Http\Message\ResponseInterface
+    App\Factory\ResponseFactory --> App\Models\Response
+    App\Factory\ResponseFactory --> App\Models\ExternalResponse
+    App\Factory\ResponseFactory --|> Psr\Http\Message\ResponseFactoryInterface
+    App\Models\ExternalResponse --|> Psr\Http\Message\ResponseInterface
+}
+
+node "Activity and Result" {
+    App\Controller --* App\Factory\ActivityFactory
+    App\Factory\ActivityFactory --> App\Contract\Activity
+    App\Contract\Result <|-- App\Models\Results\Sms
+    App\Contract\Activity <|-- App\Models\Activities\Sms
+    App\Models\Results\Sms -- App\Models\Activities\Sms : referer
+
+
+    App\Contract\Activity <|-- App\Models\Activities\SmsList
+    App\Contract\Result <|-- App\Contract\Paginated
+    App\Contract\Paginated <|-- App\Models\Results\SmsList
+    App\Models\Results\SmsList -- App\Models\Activities\SmsList : referer
+    App\Models\Results\SmsList o-- App\Models\Results\Sms
+
+}
 
 interface Psr\Http\Message\RequestInterface {
 }
@@ -114,7 +122,7 @@ class App\Middlewares\MiddlewareProvider {
     +attachResponseMiddlewares(App\Models\Response $response): App\Models\Response
 }
 
-note right of App\Models\Request::routeTo()
+note left of App\Models\Request::routeTo()
     Returns the Activity class that will handle the request base on Method and Uri.
     Alternate solution is to create a RouteService class that reads from a yaml
     config file to map the Requests to the respective Model\Activity class.
