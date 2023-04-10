@@ -1,0 +1,124 @@
+@startuml shiftbase/eggress
+Psr\Http\Message\RequestInterface <|-- App\Models\Request
+Psr\Http\Message\ResponseInterface <|-- App\Models\Response
+Psr\Http\Message\RequestInterface <|-- App\Models\ExternalRequest
+Psr\Http\Message\ResponseInterface <|-- App\Models\ExternalResponse
+Psr\Http\Client\ClientInterface <|-- App\Models\Client
+
+Psr\Http\Message\RequestFactoryInterface <|-- App\Factory\ExternalRequestFactory
+Psr\Http\Message\ResponseFactoryInterface <|-- App\Factory\ResponseFactory
+
+
+App\Contract\Activity <|-- App\Models\Activities\Sms
+App\Contract\Result <|-- App\Models\Results\Sms
+App\Models\Results\Sms -- App\Models\Activities\Sms : refere
+
+
+App\Contract\Activity <|-- App\Models\Activities\SmsList
+App\Contract\Result <|-- App\Contract\Paginated
+App\Contract\Paginated <|-- App\Models\Results\SmsList
+App\Models\Results\SmsList -- App\Models\Activities\SmsList : refere
+App\Models\Results\SmsList o-- App\Models\Results\Sms
+
+App\Controller --* App\Factory\RequestFactory
+App\Controller --* App\Factory\ExternalRequestFactory
+App\Controller --* App\Factory\ResponseFactory
+App\Controller --* App\Factory\ActivityFactory
+App\Controller --* App\Middlewares\MiddlewareProvider
+App\Controller --* App\Models\Client
+
+App\Factory\RequestFactory --> App\Models\Request
+App\Factory\ExternalRequestFactory --> App\Models\ExternalRequest
+App\Factory\ResponseFactory --> App\Models\Response
+App\Factory\ResponseFactory --> App\Models\ExternalResponse
+App\Factory\ActivityFactory --> App\Contract\Activity
+
+
+interface Psr\Http\Message\RequestInterface {
+}
+interface Psr\Http\Message\ResponseInterface {
+}
+interface Psr\Http\Client\ClientInterface {
+}
+interface Psr\Http\Message\ResponseFactoryInterface {
+
+}
+
+interface App\Contract\Activity {
+    +method: string
+    +path: string
+    +result: string
+    +middlewares: string[]
+    +__construct(App\Models\Request $request)
+    +validate(): boolean
+}
+
+interface App\Contract\Result {
+}
+
+class App\Contract\Paginated {
+    +data: array
+    +currentPage
+    +nextPage
+    +previousPage
+    +totalCount
+}
+
+class App\Models\Request {
+    +routeTo(): string
+}
+class App\Models\Response {
+}
+class App\Models\ExternalRequest {
+}
+class App\Models\ExternalResponse {
+}
+class App\Models\Client {
+}
+
+
+class App\Factory\RequestFactory {
+    +make(): App\Models\Request
+}
+
+class App\Factory\ExternalRequestFactory {
+    +makeFrom(App\Contract\Activity $activity): App\Models\ExternalRequest
+}
+
+class App\Factory\ResponseFactory {
+    +makeFrom(Psr\Http\Message\ResponseInterface $externalResponse, App\Contract\Activity $activity): App\Models\Response
+}
+
+class App\Factory\ActivityFactory {
+    +makeFrom(App\Models\Request $request): App\Contract\Activity
+}
+
+class App\Models\Activities\Sms {
+}
+
+class App\Models\Results\Sms {
+    +id
+    +message
+    +timestamp
+    +sender_id
+    +response(): App\Models\Response
+}
+
+class App\Controller {
+    +__construct(RequestFactory $requestFactory, ExternalRequestFactory $externalRequestFactory, ResponseFactory $responseFactory, ActivityFactory $activityFactory, MiddlewareService $middlewareService)
+    +handle(): App\Models\Response
+}
+
+class App\Middlewares\MiddlewareProvider {
+    +attachRequestMiddlewares(App\Models\Request $request): App\Models\Request
+    +attachResponseMiddlewares(App\Models\Response $response): App\Models\Response
+}
+
+note right of App\Models\Request::routeTo()
+    Returns the Activity class that will handle the request base on Method and Uri.
+    Alternate solution is to create a RouteService class that reads from a yaml
+    config file to map the Requests to the respective Model\Activity class.
+    But that would violate the restriction of just adding an Activity\Result class
+    for each new endpoint. 
+end note
+@enduml
