@@ -44,6 +44,7 @@ App:
         - QueryModification
 
     Controller
+    ClientException
     middleware.yaml
 ```
 

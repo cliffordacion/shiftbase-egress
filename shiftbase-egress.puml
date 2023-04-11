@@ -1,5 +1,7 @@
 @startuml shiftbase/eggress
 App\Controller --* App\Middlewares\MiddlewareProvider
+App\Controller --* ClientException
+ClientException --|> Psr\Http\Client\ClientExceptionInterface
 
 node "Requests" {
     App\Models\Request --|> Psr\Http\Message\RequestInterface
@@ -115,6 +117,7 @@ class App\Models\Results\Sms {
 class App\Controller {
     +__construct(RequestFactory $requestFactory, ExternalRequestFactory $externalRequestFactory, ResponseFactory $responseFactory, ActivityFactory $activityFactory, MiddlewareService $middlewareService)
     +handle(): App\Models\Response
+    -response(Response $response, $data = null)
 }
 
 class App\Middlewares\MiddlewareProvider {

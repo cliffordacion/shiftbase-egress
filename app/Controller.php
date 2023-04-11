@@ -34,11 +34,28 @@ class Controller
         $externalRequest = $this->externalRequestFactory->makeFrom($activity);
         $externalResponse = Client::sendRequest($externalRequest);
         
+        if ($externalResponse->getStatusCode() >= ResponseFactory::STATUS_BAD_REQUEST) {
+            throw new ClientException($externalResponse->getStatusCode(), $externalResponse->getReasonPhrase());
+        }
+
         $result = $this->responseFactory->makeFrom($externalResponse, $activity);
         $response = $result->response();
-
         $responseWithMiddleware = $this->middlewareService->attachResponseMiddlewares($response);
-        return $responseWithMiddleware;
+
+        return $this->response($responseWithMiddleware);
+    }
+
+    private function response(Response $response, $data = null)
+    {
+        $headers = $response->getHeaders();
+        foreach ($headers as $key => $value) {
+            header("$key: $value");
+        }
+        $body = $response->getBody();
+        if ($data) {
+            echo json_encode($body[$data]);
+        } else {
+            echo json_encode($body);
+        }
     }
 }
-
