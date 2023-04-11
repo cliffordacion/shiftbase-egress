@@ -1,22 +1,21 @@
 @startuml shiftbase/eggress
-App\Controller --* App\Middlewares\MiddlewareProvider
-App\Controller --* ClientException
-ClientException --|> Psr\Http\Client\ClientExceptionInterface
+App\Middlewares\MiddlewareProvider *-- App\Controller
+
+node "Client" {
+    Psr\Http\Client\ClientInterface <|-- App\Models\Client
+    Psr\Http\Client\ClientExceptionInterface <|-- ClientException
+    App\Models\Client *-- App\Controller
+    ClientException *-- App\Controller
+}
 
 node "Requests" {
     App\Models\Request --|> Psr\Http\Message\RequestInterface
     App\Models\ExternalRequest --|> Psr\Http\Message\RequestInterface
-    Psr\Http\Message\RequestFactoryInterface <|-- App\Factory\ExternalRequestFactory
+    App\Factory\ExternalRequestFactory --|> Psr\Http\Message\RequestFactoryInterface
     App\Controller --* App\Factory\RequestFactory
     App\Controller --* App\Factory\ExternalRequestFactory
     App\Factory\RequestFactory --> App\Models\Request
     App\Factory\ExternalRequestFactory --> App\Models\ExternalRequest
-}
-
-node "Client" {
-    App\Models\Client --|> Psr\Http\Client\ClientInterface
-    App\Controller --* App\Models\Client
-
 }
 
 node "Response" {
@@ -125,11 +124,15 @@ class App\Middlewares\MiddlewareProvider {
     +attachResponseMiddlewares(App\Models\Response $response): App\Models\Response
 }
 
-note left of App\Models\Request::routeTo()
+note right of App\Models\Request::routeTo()
     Returns the Activity class that will handle the request base on Method and Uri.
     Alternate solution is to create a RouteService class that reads from a yaml
     config file to map the Requests to the respective Model\Activity class.
     But that would violate the restriction of just adding an Activity\Result class
     for each new endpoint. 
+end note
+
+note right of App\Factory\RequestFactory::make()
+    This is where a request if formed from the server variables
 end note
 @enduml
